@@ -1,0 +1,55 @@
+version: "3"
+services:
+  # 1. A web service to host the [python app]
+  web:
+    # replace username/repo:tag w/ ya name & image details
+    image: samnnodim/hello-python
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          # use at max 10%
+          cpus: "0.1"
+          # use at most 50M of RAM
+          memory: 50M 
+      restart_policy:
+        condition: on-failure
+    ports:
+      # map 80 on the host to the web's port 80 
+      - "80:80"
+    networks:
+      # uses the internal webnet network
+      - webnet
+  
+  # 2. a visualizer to get info on the stack
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080:8080"
+    volumes:
+      # gives the visualizer acess to Docker socket/API
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        # only put it on the manager node
+        constraints: [node.role == manager]
+    networks:
+      # uses the internal webnet network
+      - webnet
+
+  # 3. run Redis and attach it to the webnet
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      # store the data in `/data`
+      - ./data:/data
+    deploy:
+      placement:
+        # only put it on the manager node
+        constraints: [node.role == manager]
+    networks:
+      - webnet
+networks:
+  webnet:
